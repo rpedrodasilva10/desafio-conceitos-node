@@ -104,7 +104,7 @@ app.post(
 
     repo.likes += 1;
 
-    return response.status(201).json();
+    return response.status(201).json(repo);
   }
 );
 

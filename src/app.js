@@ -10,25 +10,42 @@ app.use(cors());
 
 const repositories = [];
 
-app.get('/repositories', (request, response) => {
-  /**
-   * GET /repositories: Rota que lista todos os repositórios;
-   */
+// Midlewares
+function validateUuidInput(req, res, next) {
+  const { id } = req.params;
 
+  if (!isUuid(id)) {
+    return res.status(400).json({
+      message: 'Invalid UUID!',
+      description: `UUID: ${id} is not valid`,
+    });
+  }
+
+  next();
+}
+
+function validateResource(req, res, next) {
+  const { id } = req.params;
+
+  const repo = repositories.find((repo) => repo.id == id);
+
+  if (!repo) {
+    return res.status(404).json({
+      message: 'Resource not found!',
+      description: `Resource not found with id: ${id}`,
+    });
+  }
+
+  next();
+}
+
+app.get('/repositories', (request, response) => {
   return response.status(200).json(repositories);
 });
 
 app.post('/repositories', (request, response) => {
   const params = request.body;
   const validRequest = params.url && params.title && params.techs;
-
-  /**
-   * POST /repositories: A rota deve receber title, url e techs dentro do corpo da requisição,
-   * endo a URL o link para o github desse repositório. Ao cadastrar um novo projeto, ele deve ser armazenado dentro de
-   * um objeto no seguinte formato:
-   * { id: "uuid", title: 'Desafio Node.js', url: 'http://github.com/...', techs: ["Node.js", "..."], likes: 0 };
-   * Certifique-se que o ID seja um UUID, e de sempre iniciar os likes como 0.
-   */
 
   if (!validRequest) {
     response.status(400).json({
@@ -50,29 +67,48 @@ app.post('/repositories', (request, response) => {
   return response.status(201).json(newRepo);
 });
 
-app.put('/repositories/:id', (request, response) => {
-  const { id } = request.params;
-  const { techs, title, url } = request.body;
-  /*
-   * PUT /repositories/:id: A rota deve alterar apenas o title, a url e as techs do repositório que possua o id igual
-   * ao id presente nos parâmetros da rota;
+app.put(
+  '/repositories/:id',
+  validateUuidInput,
+  validateResource,
+  (request, response) => {
+    const { id } = request.params;
+    const { techs, title, url } = request.body;
+
+    let targetRepo = repositories.find((repo) => repo.id == id);
+
+    targetRepo.title = title ? title : targetRepo.title;
+    targetRepo.url = url ? url : targetRepo.url;
+    targetRepo.techs = techs ? techs : targetRepo.techs;
+
+    return response.status(200).json(targetRepo);
+  }
+);
+
+app.delete('/repositories/:id', validateUuidInput, (request, response) => {
+  /**
+   * DELETE /repositories/:id: A rota deve deletar o repositório com o id presente nos parâmetros da rota;
    */
+  const { id } = request.params;
+  const repoIndex = repositories.findIndex((repo) => repo.id == id);
 
-  let targetRepo = repositories.find((repo) => repo.id == id);
+  repositories.splice(repoIndex, 1);
 
-  targetRepo.title = title ? title : targetRepo.title;
-  targetRepo.url = url ? url : targetRepo.url;
-  targetRepo.techs = techs ? techs : targetRepo.techs;
-
-  return response.status(200).json(targetRepo);
+  return response.status(204).json();
 });
 
-app.delete('/repositories/:id', (request, response) => {
-  // TODO
-});
+app.post(
+  '/repositories/:id/like',
+  validateUuidInput,
+  validateResource,
+  (request, response) => {
+    const { id } = request.params;
+    const repo = repositories.find((repo) => repo.id == id);
 
-app.post('/repositories/:id/like', (request, response) => {
-  // TODO
-});
+    repo.likes += 1;
+
+    return response.status(201).json();
+  }
+);
 
 module.exports = app;

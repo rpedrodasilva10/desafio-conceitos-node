@@ -86,9 +86,6 @@ app.put(
 );
 
 app.delete('/repositories/:id', validateUuidInput, (request, response) => {
-  /**
-   * DELETE /repositories/:id: A rota deve deletar o repositório com o id presente nos parâmetros da rota;
-   */
   const { id } = request.params;
   const repoIndex = repositories.findIndex((repo) => repo.id == id);
 
